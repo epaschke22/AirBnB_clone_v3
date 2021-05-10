@@ -16,10 +16,8 @@ def reviews(place_id):
     if placeobj is None:
         abort(404)
     new_list = []
-    allreviews = storage.all(Review).values()
-    for obj in allreviews:
-        if obj.place_id == place_id:
-            new_list.append(obj.to_dict())
+    for obj in placeobj.reviews:
+        new_list.append(obj.to_dict())
     return jsonify(new_list)
 
 
@@ -27,10 +25,11 @@ def reviews(place_id):
                  strict_slashes=False)
 def review_id(review_id):
     """retrieves a review object"""
-    reviewobj = storage.get(Review, review_id).to_dict()
-    if reviewobj is None:
+    try:
+        reviewobj = storage.get(Review, review_id).to_dict()
+        return jsonify(reviewobj)
+    except Exception:
         abort(404)
-    return jsonify(reviewobj)
 
 
 @app_views.route('/reviews/<review_id>', methods=["DELETE"],
@@ -50,20 +49,22 @@ def review_delete(review_id):
                  strict_slashes=False)
 def review_create(place_id):
     """creates a review object"""
-    body_dict = request.get_json()
-    allplaces = storage.get(Place, place_id)
-    if allplaces is None:
-        abort(404)
-    if body_dict is None:
-        abort(400, "Not a JSON")
+    try:
+        if not request.get_json():
+            return jsonify({"error": "Not a JSON"}), 400
+        body_dict = request.get_json()
+    except:
+        return jsonify({"error": "Not a JSON"}), 400
     if "user_id" not in body_dict:
-        abort(400, "Missing user_id")
-    user_id = storage.get(User, body_dict["user_id"])
-    if user_id is None:
+        return jsonify({"error": "Missing user_id"}), 400
+    if "text" not in body_dict:
+        return jsonify({"error": "Missing text"}), 400
+    if storage.get(User, body_dict["user_id"]) is None:
         abort(404)
-    if "text" not in body_dict.keys():
-        abort(400, "Missing text")
     reviewobj = Review(**body_dict)
+    for key, value in request.get_json().items():
+        setattr(reviewobj, key, value)
+    setattr(reviewobj, "place_id", place_id)
     reviewobj.save()
     return jsonify(reviewobj.to_dict()), 201
 
@@ -75,7 +76,10 @@ def review_update(review_id):
     reviewobj = storage.get(Review, review_id)
     if reviewobj is None:
         abort(404)
-    body_dict = request.get_json()
+    try:
+        body_dict = request.get_json()
+    except:
+        return jsonify({"error": "Not a JSON"}), 400
     if body_dict is None:
         abort(400, "Not a JSON")
     body_dict.pop("id", None)
