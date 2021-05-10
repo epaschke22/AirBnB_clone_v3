@@ -19,33 +19,38 @@ def user_list():
 @app_views.route('/users/<user_id>', methods=["GET"], strict_slashes=False)
 def user_id(user_id):
     """retrieves a user object"""
-    userobj = storage.get(User, user_id).to_dict()
+    try:
+        userobj = storage.get(User, user_id).to_dict()
+    except:
+        abort(404)
     if userobj is None:
         abort(404)
     return jsonify(userobj)
 
 
 @app_views.route('/users/<user_id>', methods=["DELETE"], strict_slashes=False)
-def user_delete(user_id):
+def user_delete(user_id=None):
     """deletes a user object"""
     userobj = storage.get(User, user_id)
-    if userobj is not None:
-        storage.delete(userobj)
-        storage.save()
-        return jsonify({}), 200
-    else:
+    if userobj is None:
         abort(404)
+    storage.delete(userobj)
+    userobj.save()
+    return jsonify({}), 200
 
 
 @app_views.route('/users', methods=["POST"], strict_slashes=False)
 def user_create():
     """creates a user object"""
-    body_dict = request.get_json()
-    if body_dict is None:
+    try:
+        body_dict = request.get_json()
+        if body_dict is None:
+            abort(400, "Not a JSON")
+    except Exception:
         abort(400, "Not a JSON")
-    if "email" not in body_dict:
+    if "email" not in body_dict.keys():
         abort(400, "Missing email")
-    if "password" not in body_dict:
+    if "password" not in body_dict.keys():
         abort(400, "Missing password")
     userobj = User(**body_dict)
     userobj.save()
