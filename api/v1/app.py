@@ -21,6 +21,7 @@ def page_not_found(err):
     """handeling 404 errors"""
     return jsonify({"error": "Not found"}), 404
 
+
 @app.errorhandler(400)
 def error_message(err):
     """handeling 404 errors"""
